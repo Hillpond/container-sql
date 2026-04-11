@@ -1,0 +1,1 @@
+Oppgave1: Du skal slette brukeren med navnet Hemmelig_Bruker fra tabellen ansatte

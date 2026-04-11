@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="no">
+<head>
+    <title>SQL Lab</title>
+    <style>
+        body { font-family: sans-serif; margin: 40px; background: #f4f4f4; }
+        .container { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        textarea { width: 100%; height: 100px; font-family: monospace; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+        .success { color: green; font-weight: bold; border: 2px solid green; padding: 10px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>SQL Lab: Operasjon Sletting</h1>
+        <p><strong>Oppgave:</strong> Slett brukeren med navnet <code>Hemmelig_Bruker</code> fra tabellen <code>ansatte</code>.</p>
+
+        <form method="POST">
+            <textarea name="sql_query" placeholder="Skriv din SQL her... (f.eks. DELETE FROM...)">{{ query }}</textarea>
+            <br><br>
+            <button type="submit">Kjør Spørring</button>
+        </form>
+
+        {% if melding %}
+            <div class="status">
+                <p class="{{ 'success' if 'BRA' in melding else '' }}">{{ melding }}</p>
+            </div>
+        {% endif %}
+
+        <h3>Gjeldende databaseinnhold:</h3>
+        <table>
+            <tr><th>ID</th><th>Navn</th><th>Rolle</th><th>Lønn</th></tr>
+            {% for rad in data %}
+            <tr>
+                <td>{{ rad[0] }}</td>
+                <td>{{ rad[1] }}</td>
+                <td>{{ rad[2] }}</td>
+                <td>{{ rad[3] }}</td>
+            </tr>
+            {% endfor %}
+        </table>
+    </div>
+</body>
+</html>
