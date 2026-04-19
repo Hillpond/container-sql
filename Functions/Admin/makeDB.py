@@ -11,7 +11,7 @@ mydb = mysql.connector.connect(
 cursor = mydb.cursor()
 
 #Variables
-pathToSchemaScript = "DB's/"
+scriptFolder = "DB's/"
 
 
 #Select database ur working in
@@ -19,19 +19,19 @@ databaseName = "mydb"
 
 cursor.execute("USE " + databaseName + " ;")
 
-#making tables form file
-with open(pathToSchemaScript + "LegeTable.sql", "r", encoding="utf-8") as f:
-  sqlScript = f.read()
+#making tables form sql file:
+def makeTables(pathToSchemaScript):
+  with open(pathToSchemaScript, "r", encoding="utf-8") as f:
+    sqlScript = f.read()
+  for command in sqlScript.split(";"):
+    command = command.strip() #fjerner mellomromm og enter(tommre rom)
+    if not command:
+      continue
+    print (command)
+    cursor.execute(command)
+  mydb.commit()
 
-for command in sqlScript.split(";"):
-  command = command.strip() #fjerner mellomromm og enter(tommre rom)
-  if not command:
-    continue
-  print (command)
-  cursor.execute(command)
-
-mydb.commit()
-
+makeTables(scriptFolder + "LegeTable.sql")
 
 
 cursor.execute("SHOW TABLES")
