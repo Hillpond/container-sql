@@ -3,8 +3,17 @@ from fastapi import FastAPI, UploadFile, File
 
 from Functions.Admin.upload_File import upload_files
 from Functions.User.querySend import querySend
-
+from fastapi.middleware.cors import CORSMiddleware
 app = FastAPI()
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+
 
 @app.get("/query")
 def run_query(sql: str):
