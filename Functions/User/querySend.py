@@ -22,7 +22,6 @@ cursor.execute("USE " + databaseName + " ;")
 
 def querySend(queryString):
     for command in queryString.split(";"):
-
       command = command.strip()
 
       if not command:
