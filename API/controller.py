@@ -12,7 +12,7 @@ def run_query(sql: str):
     return {"results": results}
 
 @app.post("/admin/upload")
-def upload_endpoint(file: UploadFile = File(...)):
-    return upload_files(file)
+async def upload_endpoint(file: UploadFile = File(...)):
+    return await upload_files(file)
 
 
