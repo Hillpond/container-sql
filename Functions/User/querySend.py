@@ -29,9 +29,11 @@ def querySend(queryString):
         continue
 
       cursor.execute(command)
-    print(cursor.fetchall())
+    results = cursor.fetchall()
+    print(results)
     mydb.commit()
     print("Query sent successfully")
+    return results
 
 
 
