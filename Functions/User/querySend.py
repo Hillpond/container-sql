@@ -20,5 +20,25 @@ pathToSchemaScript = "DB's/"
 databaseName = "mydb"
 cursor.execute("USE " + databaseName + " ;")
 
+def querySend(queryString):
+    for command in queryString.split(";"):
+
+      command = command.strip()
+
+      if not command:
+        continue
+
+      cursor.execute(command)
+    print(cursor.fetchall())
+    mydb.commit()
+    print("Query sent successfully")
+
+
+
+
+testquery = "SELECT * FROM lege;"
+
+querySend(testquery)
+
 
 
