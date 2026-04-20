@@ -18,7 +18,7 @@ app.add_middleware(
 @app.get("/query")
 def run_query(sql: str):
     results = querySend(sql)
-    return {"results": results}
+    return results
 
 @app.post("/admin/upload")
 async def upload_endpoint(file: UploadFile = File(...)):

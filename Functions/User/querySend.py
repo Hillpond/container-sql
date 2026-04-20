@@ -32,7 +32,10 @@ def querySend(queryString):
     print(results)
     mydb.commit()
     print("Query sent successfully")
-    return results
+    return {
+        "columns" : cursor.description,
+        "rows" : results
+    }
 
 
 
