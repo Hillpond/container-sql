@@ -15,8 +15,6 @@
           --accent: #3b82f6;
           --accent-hover: #2563eb;
           --border: #374151;
-          --danger: #ef4444;
-          --success: #22c55e;
         }
 
         * { box-sizing: border-box; }
@@ -76,7 +74,7 @@
           outline: none;
         }
 
-        textarea:focus, input:focus {
+        textarea:focus {
           border-color: var(--accent);
           box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
         }
@@ -101,30 +99,11 @@
 
         button:hover { background: var(--accent-hover); }
         button:active { transform: translateY(1px); }
+
         button.secondary {
           background: transparent;
           border: 1px solid var(--border);
           color: var(--text);
-        }
-
-        .input-group {
-          margin: 16px 0;
-        }
-
-        label {
-          display: block;
-          margin-bottom: 8px;
-          font-weight: 700;
-        }
-
-        input[type="text"] {
-          width: 100%;
-          padding: 12px 14px;
-          border-radius: 12px;
-          border: 1px solid var(--border);
-          background: var(--panel-2);
-          color: var(--text);
-          font-size: 14px;
         }
 
         .status {
@@ -192,10 +171,12 @@
           .row {
             grid-template-columns: 1fr;
           }
+
           .controls {
             flex-direction: row;
             flex-wrap: wrap;
           }
+
           button {
             flex: 1 1 180px;
           }
@@ -206,20 +187,14 @@
 <div class="container">
     <div class="card">
         <h1>Database Query Frontend</h1>
-        <p>Write a SQL query, send it to your FastAPI backend, and view the returned rows as a table.</p>
-
-        <div class="input-group">
-            <label for="apiBase">API base URL</label>
-            <input id="apiBase" type="text" value="http://localhost:8000" placeholder="http://localhost:8000" />
-        </div>
+        <p>Write a SQL query, send it, and view the returned rows in a table with real column names.</p>
 
         <div class="row">
-            <textarea id="sqlInput" placeholder="Example: SELECT * FROM lege;">SELECT * FROM lege;</textarea>
+            <textarea id="sqlInput" placeholder="Write your SQL query here..."></textarea>
 
             <div class="controls">
                 <button id="sendBtn">Send query</button>
                 <button id="clearBtn" class="secondary" type="button">Clear results</button>
-                <button id="sampleBtn" class="secondary" type="button">Use sample query</button>
             </div>
         </div>
 
@@ -230,17 +205,15 @@
         </div>
 
         <div class="hint">
-            This frontend calls <code>GET /query?sql=...</code>. Since your backend currently returns only row data and not column names, the table headers are generated as <code>Column 1</code>, <code>Column 2</code>, and so on.
+            This frontend expects the backend to return <code>{ columns: [...], rows: [...] }</code> from <code>GET /query?sql=...</code>.
         </div>
     </div>
 </div>
 
 <script>
-    const apiBaseInput = document.getElementById('apiBase');
     const sqlInput = document.getElementById('sqlInput');
     const sendBtn = document.getElementById('sendBtn');
     const clearBtn = document.getElementById('clearBtn');
-    const sampleBtn = document.getElementById('sampleBtn');
     const statusBox = document.getElementById('status');
     const tableWrap = document.getElementById('tableWrap');
 
@@ -263,28 +236,38 @@
         .replaceAll("'", '&#039;');
     }
 
-    function renderTable(rows) {
-      if (!Array.isArray(rows) || rows.length === 0) {
+    function renderTable(columns, rows) {
+      const safeColumns = Array.isArray(columns) ? columns : [];
+      const safeRows = Array.isArray(rows) ? rows : [];
+
+      if (safeColumns.length === 0 && safeRows.length === 0) {
         tableWrap.innerHTML = '<div class="empty">Query executed, but no rows were returned.</div>';
         return;
       }
 
-      const normalizedRows = rows.map(row => Array.isArray(row) ? row : [row]);
-      const maxColumns = Math.max(...normalizedRows.map(row => row.length));
-      const headers = Array.from({ length: maxColumns }, (_, i) => `Column ${i + 1}`);
-
       let html = '<table><thead><tr>';
-      headers.forEach(header => {
-        html += `<th>${escapeHtml(header)}</th>`;
+
+      safeColumns.forEach(column => {
+        html += `<th>${escapeHtml(column)}</th>`;
       });
+
       html += '</tr></thead><tbody>';
 
-      normalizedRows.forEach(row => {
+      safeRows.forEach(row => {
+        const rowValues = Array.isArray(row) ? row : [row];
         html += '<tr>';
-        for (let i = 0; i < maxColumns; i++) {
-          const value = row[i] ?? '';
-          html += `<td>${escapeHtml(value)}</td>`;
+
+        if (safeColumns.length > 0) {
+          for (let i = 0; i < safeColumns.length; i++) {
+            const value = rowValues[i] ?? '';
+            html += `<td>${escapeHtml(value)}</td>`;
+          }
+        } else {
+          rowValues.forEach(value => {
+            html += `<td>${escapeHtml(value)}</td>`;
+          });
         }
+
         html += '</tr>';
       });
 
@@ -293,13 +276,7 @@
     }
 
     async function sendQuery() {
-      const base = apiBaseInput.value.trim().replace(/\/$/, '');
       const sql = sqlInput.value.trim();
-
-      if (!base) {
-        setStatus('Please enter an API base URL.', 'error');
-        return;
-      }
 
       if (!sql) {
         setStatus('Please write a SQL query first.', 'error');
@@ -310,8 +287,9 @@
       setStatus('Sending query...');
 
       try {
-        const url = `${base}/query?sql=${encodeURIComponent(sql)}`;
-        const response = await fetch(url, { method: 'GET' });
+        const response = await fetch(`/query?sql=${encodeURIComponent(sql)}`, {
+          method: 'GET'
+        });
 
         if (!response.ok) {
           const errorText = await response.text();
@@ -319,8 +297,8 @@
         }
 
         const data = await response.json();
-        renderTable(data.results || []);
-        const rowCount = Array.isArray(data.results) ? data.results.length : 0;
+        renderTable(data.columns || [], data.rows || []);
+        const rowCount = Array.isArray(data.rows) ? data.rows.length : 0;
         setStatus(`Query completed. Returned ${rowCount} row(s).`, 'success');
       } catch (error) {
         console.error(error);
@@ -332,10 +310,6 @@
 
     sendBtn.addEventListener('click', sendQuery);
     clearBtn.addEventListener('click', clearResults);
-    sampleBtn.addEventListener('click', () => {
-      sqlInput.value = 'SELECT * FROM lege;';
-      setStatus('Sample query loaded.');
-    });
 
     sqlInput.addEventListener('keydown', (event) => {
       if ((event.ctrlKey || event.metaKey) && event.key === 'Enter') {
