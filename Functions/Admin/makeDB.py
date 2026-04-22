@@ -5,7 +5,7 @@ mydb = mysql.connector.connect(
   host="localhost",
   port="3307",
   user="root",
-  passwd="pass",
+  passwd="pass"
 )
 # lager et cursor objekt, funker litt som hvor / hva man gjør i databasen
 cursor = mydb.cursor()
