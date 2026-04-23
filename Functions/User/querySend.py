@@ -33,7 +33,7 @@ def querySend(queryString):
     mydb.commit()
     print("Query sent successfully")
     return {
-        "columns" : cursor.description,
+        "columns": [col[0] for col in cursor.description], 
         "rows" : results
     }
 

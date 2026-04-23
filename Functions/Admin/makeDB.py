@@ -1,4 +1,7 @@
 import mysql.connector
+import asyncio
+
+from Functions.Admin.getSelectedFile import getSelectedFile
 
 #oppretter kobling til databasen
 mydb = mysql.connector.connect(
@@ -7,11 +10,12 @@ mydb = mysql.connector.connect(
   user="root",
   passwd="pass"
 )
+
 # lager et cursor objekt, funker litt som hvor / hva man gjør i databasen
 cursor = mydb.cursor()
 
 #Variables
-scriptFolder = "DB's/"
+tableScript = "DB's/" + asyncio.run(getSelectedFile())
 
 
 #Select database ur working in
@@ -31,7 +35,7 @@ def makeTables(pathToSchemaScript):
     cursor.execute(command)
   mydb.commit()
 
-makeTables(scriptFolder + "LegeTable.sql")
+makeTables(tableScript)
 
 
 cursor.execute("SHOW TABLES")

@@ -42,12 +42,11 @@
       box-shadow: 0 20px 50px rgba(0, 0, 0, 0.25);
       padding: 24px;
       backdrop-filter: blur(6px);
+      margin-bottom: 24px;
     }
 
-    h1 {
-      margin: 0 0 8px;
-      font-size: 2rem;
-    }
+    h1 { margin: 0 0 8px; font-size: 2rem; }
+    h2 { margin: 0 0 16px; font-size: 1.3rem; }
 
     p {
       margin: 0 0 20px;
@@ -102,15 +101,22 @@
 
     button:hover { background: var(--accent-hover); }
     button:active { transform: translateY(1px); }
+
     button.secondary {
       background: transparent;
       border: 1px solid var(--border);
       color: var(--text);
     }
-    button:disabled {
-      opacity: 0.65;
-      cursor: not-allowed;
+    button.secondary:hover { background: rgba(255,255,255,0.05); }
+
+    button.active-btn {
+      background: rgba(59, 130, 246, 0.2);
+      border: 1px solid var(--accent);
+      color: #93c5fd;
     }
+    button.active-btn:hover { background: rgba(59, 130, 246, 0.3); }
+
+    button:disabled { opacity: 0.65; cursor: not-allowed; }
 
     .status {
       margin-top: 16px;
@@ -126,7 +132,7 @@
       word-break: break-word;
     }
 
-    .status.error { color: #fecaca; border-color: rgba(239, 68, 68, 0.45); }
+    .status.error   { color: #fecaca; border-color: rgba(239, 68, 68, 0.45); }
     .status.success { color: #bbf7d0; border-color: rgba(34, 197, 94, 0.45); }
 
     .endpoint {
@@ -140,10 +146,76 @@
       padding: 2px 6px;
       border-radius: 6px;
     }
+
+    .file-row {
+      padding: 12px 16px;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      margin-bottom: 8px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: rgba(255,255,255,0.02);
+      transition: background 0.15s, border-color 0.15s;
+    }
+
+    .file-row:hover { background: rgba(255,255,255,0.04); }
+
+    .file-row.active {
+      border-color: var(--accent);
+      background: rgba(59, 130, 246, 0.08);
+    }
+
+    .file-name {
+      font-weight: 600;
+      color: var(--text);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .file-ext {
+      font-size: 12px;
+      padding: 2px 8px;
+      border-radius: 6px;
+      background: rgba(59,130,246,0.15);
+      color: #93c5fd;
+      font-weight: 600;
+      text-transform: uppercase;
+    }
+
+    .star { color: #facc15; font-size: 16px; }
+
+    .file-count {
+      font-size: 13px;
+      color: var(--muted);
+      margin-bottom: 12px;
+    }
+
+    .empty-state {
+      color: var(--muted);
+      text-align: center;
+      padding: 24px 0;
+    }
+
+    .selected-banner {
+      padding: 10px 14px;
+      border-radius: 10px;
+      background: rgba(59, 130, 246, 0.1);
+      border: 1px solid rgba(59, 130, 246, 0.3);
+      color: #93c5fd;
+      font-size: 14px;
+      margin-bottom: 16px;
+      display: none;
+    }
+
+    .selected-banner.visible { display: block; }
   </style>
 </head>
 <body>
   <div class="container">
+
+    <!-- Upload card -->
     <div class="card">
       <h1>Admin Upload Page</h1>
       <p>Select a file and upload it to the admin endpoint.</p>
@@ -165,17 +237,38 @@
         Upload target: <code>http://localhost:8000/admin/upload</code>
       </div>
     </div>
+
+    <!-- Files card -->
+    <div class="card">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+        <h2 style="margin: 0;">Uploaded Files</h2>
+        <button class="secondary" onclick="loadFiles()" type="button" style="padding: 8px 14px; font-size: 13px;">
+          ↻ Refresh
+        </button>
+      </div>
+
+      <div id="selectedBanner" class="selected-banner">
+        ★ Active database: <strong id="bannerFilename">—</strong>
+      </div>
+
+      <div id="fileCount" class="file-count"></div>
+      <div id="fileList"><p class="empty-state">Loading...</p></div>
+    </div>
+
   </div>
 
   <script>
-    const UPLOAD_URL = 'http://localhost:8000/admin/upload';
+    const BASE_URL     = 'http://127.0.0.1:8000';
+    const UPLOAD_URL   = `${BASE_URL}/admin/upload`;
+    const FILES_URL    = `${BASE_URL}/admin/files`;
+    const SELECTED_URL = `${BASE_URL}/admin/selected`;
 
-    const fileInput = document.getElementById('fileInput');
-    const uploadBtn = document.getElementById('uploadBtn');
-    const clearBtn = document.getElementById('clearBtn');
-    const statusBox = document.getElementById('status');
+    const fileInput    = document.getElementById('fileInput');
+    const uploadBtn    = document.getElementById('uploadBtn');
+    const clearBtn     = document.getElementById('clearBtn');
+    const statusBox    = document.getElementById('status');
     const selectedFile = document.getElementById('selectedFile');
-    const uploadBox = document.getElementById('uploadBox');
+    const uploadBox    = document.getElementById('uploadBox');
 
     function setStatus(message, type = '') {
       statusBox.textContent = message;
@@ -195,9 +288,12 @@
       setStatus('Cleared.');
     }
 
+    function getExtension(filename) {
+      return filename.split('.').pop() || '?';
+    }
+
     async function uploadFile() {
       const file = fileInput.files[0];
-
       if (!file) {
         setStatus('Please choose a file first.', 'error');
         return;
@@ -221,13 +317,76 @@
         }
 
         const data = await response.json();
-        const message = data?.message || `${file.name} uploaded successfully.`;
-        setStatus(message, 'success');
+        setStatus(data?.message || `${file.name} uploaded successfully.`, 'success');
+        loadFiles();
       } catch (error) {
-        console.error(error);
         setStatus(`Failed to upload file: ${error.message}`, 'error');
       } finally {
         uploadBtn.disabled = false;
+      }
+    }
+
+    async function selectFile(filename) {
+      await fetch(`${BASE_URL}/admin/select/${encodeURIComponent(filename)}`, {
+        method: 'POST'
+      });
+      loadFiles();
+    }
+
+    async function loadFiles() {
+      const fileList   = document.getElementById('fileList');
+      const fileCount  = document.getElementById('fileCount');
+      const banner     = document.getElementById('selectedBanner');
+      const bannerName = document.getElementById('bannerFilename');
+
+      fileList.innerHTML = '<p class="empty-state">Loading...</p>';
+      fileCount.textContent = '';
+
+      try {
+        const [filesRes, selRes] = await Promise.all([
+          fetch(FILES_URL),
+          fetch(SELECTED_URL)
+        ]);
+
+        const filesData = await filesRes.json();
+        const selData   = await selRes.json();
+        const selected  = selData.selected;
+
+        if (selected) {
+          bannerName.textContent = selected;
+          banner.classList.add('visible');
+        } else {
+          banner.classList.remove('visible');
+        }
+
+        if (filesData.files.length === 0) {
+          fileCount.textContent = '0 files';
+          fileList.innerHTML = '<p class="empty-state">No files uploaded yet.</p>';
+          return;
+        }
+
+        fileCount.textContent = `${filesData.files.length} file${filesData.files.length !== 1 ? 's' : ''}`;
+
+        fileList.innerHTML = filesData.files.map(file => `
+          <div class="file-row ${file.name === selected ? 'active' : ''}">
+            <span class="file-name">
+              ${file.name === selected ? '<span class="star">★</span>' : ''}
+              ${file.name}
+            </span>
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <span class="file-ext">${getExtension(file.name)}</span>
+              <button
+                onclick="selectFile('${file.name}')"
+                class="${file.name === selected ? 'active-btn' : 'secondary'}"
+                style="padding: 6px 14px; font-size: 13px; border-radius: 8px;">
+                ${file.name === selected ? '✓ Valgt' : 'Velg'}
+              </button>
+            </div>
+          </div>
+        `).join('');
+
+      } catch (err) {
+        fileList.innerHTML = '<p style="color: var(--error); text-align:center; padding: 16px 0;">Could not load files — is the server running?</p>';
       }
     }
 
@@ -235,24 +394,23 @@
     uploadBtn.addEventListener('click', uploadFile);
     clearBtn.addEventListener('click', clearSelection);
 
-    uploadBox.addEventListener('dragover', (event) => {
-      event.preventDefault();
+    uploadBox.addEventListener('dragover', (e) => {
+      e.preventDefault();
       uploadBox.classList.add('dragover');
     });
-
     uploadBox.addEventListener('dragleave', () => {
       uploadBox.classList.remove('dragover');
     });
-
-    uploadBox.addEventListener('drop', (event) => {
-      event.preventDefault();
+    uploadBox.addEventListener('drop', (e) => {
+      e.preventDefault();
       uploadBox.classList.remove('dragover');
-
-      if (event.dataTransfer.files && event.dataTransfer.files.length > 0) {
-        fileInput.files = event.dataTransfer.files;
+      if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+        fileInput.files = e.dataTransfer.files;
         updateSelectedFile();
       }
     });
+
+    loadFiles();
   </script>
 </body>
 </html>
