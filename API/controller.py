@@ -1,7 +1,7 @@
 
 from fastapi import FastAPI, UploadFile, File
 from starlette.responses import FileResponse
-
+from Functions.Admin.deleteFile import deleteFile
 from Functions.Admin.setSelectedFile import setSelectedFile
 from Functions.Admin.getSelectedFile import getSelectedFile
 from Functions.Admin.showAllFiles import showAllFiles
@@ -42,6 +42,11 @@ async def select_file(filename: str):
 async def get_selected():
     selected = await getSelectedFile()
     return {"selected": selected}
+
+@app.delete("/admin/delete/{filename}")
+async def delete_file(filename: str):
+    result = await deleteFile("Functions/Admin/DB's/" + filename)
+    return result
 
 #test
 @app.get("/admin")
