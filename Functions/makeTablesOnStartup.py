@@ -24,7 +24,7 @@ databaseName = "mydb"
 cursor.execute("USE " + databaseName + " ;")
 
 #making tables form sql file:
-def makeTables(pathToSchemaScript):
+def makeTablesOnStartup(pathToSchemaScript):
   with open(pathToSchemaScript, "r", encoding="utf-8") as f:
     sqlScript = f.read()
   for command in sqlScript.split(";"):
@@ -35,7 +35,7 @@ def makeTables(pathToSchemaScript):
     cursor.execute(command)
   mydb.commit()
 
-makeTables(tableScript)
+makeTablesOnStartup(tableScript)
 
 
 cursor.execute("SHOW TABLES")

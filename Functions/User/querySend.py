@@ -16,11 +16,10 @@ cursor = mydb.cursor()
 pathToSchemaScript = "DB's/"
 
 
-#Select database ur working in
-databaseName = "mydb"
-cursor.execute("USE " + databaseName + " ;")
 
-def querySend(queryString):
+
+def querySend(queryString,userSchemaName):
+    cursor.execute(f"USE {userSchemaName}")  # Select database ur working in
     for command in queryString.split(";"):
       command = command.strip()
 
@@ -37,12 +36,6 @@ def querySend(queryString):
         "rows" : results
     }
 
-
-
-
-testquery = "SELECT * FROM lege;"
-
-querySend(testquery)
 
 
 

@@ -8,6 +8,7 @@ from Functions.Admin.showAllFiles import showAllFiles
 from Functions.Admin.upload_File import upload_files
 from Functions.User.querySend import querySend
 from fastapi.middleware.cors import CORSMiddleware
+from Functions.createSchemaBasedOnSession  import createSchemaBasedOnSession
 app = FastAPI()
 
 app.add_middleware(
@@ -20,8 +21,8 @@ app.add_middleware(
 
 
 @app.get("/query")
-def run_query(sql: str):
-    results = querySend(sql)
+def run_query(sql: str, userSchemaName: str):
+    results = querySend(sql, userSchemaName)
     return results
 
 @app.post("/admin/upload")
@@ -47,6 +48,12 @@ async def get_selected():
 async def delete_file(filename: str):
     result = await deleteFile("Functions/Admin/DB's/" + filename)
     return result
+
+#henter localSession for å lage schema
+@app.post("/session/init")
+def init_session(userSchemaName: str):
+    return createSchemaBasedOnSession(userSchemaName)
+
 
 #test
 @app.get("/admin")

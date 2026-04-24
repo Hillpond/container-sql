@@ -203,6 +203,33 @@
     const statusBox = document.getElementById('status');
     const tableWrap = document.getElementById('tableWrap');
 
+    // --- creates session code so user gets their own schema --
+    // runs at the start when user connects to web page (that is why its a script)
+    let userSchemaName = sessionStorage.getItem('userSchemaName');
+    if (!userSchemaName){
+      userSchemaName = generateUserSchemaName();
+      sessionStorage.setItem('userSchemaName',userSchemaName)
+    }
+    //sender localSession til funksjonen i controlleren
+    fetch(`http://localhost:8000/session/init?userSchemaName=${userSchemaName}`, {
+    method: 'POST'
+  })
+    .then(res => res.json())
+    .then(data => console.log('Schema opprettet:', data))
+    .catch(err => console.error('Feil ved oppretting av schema:', err))
+
+
+    // Creates Session storage for the user based on a set of random characters
+    function generateUserSchemaName(){
+      const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+      let schemaName = '';
+      for (let numberOfCharacters = 0; numberOfCharacters < 20; numberOfCharacters++){
+        schemaName += characters.charAt(Math.floor(Math.random() * characters.length));
+      }
+      return schemaName
+    }
+
+
     function setStatus(message, type = '') {
       statusBox.textContent = message;
       statusBox.className = `status ${type}`.trim();
@@ -295,9 +322,11 @@
       setStatus('Sending query...');
 
       try {
-        const response = await fetch(`${API_URL}?sql=${encodeURIComponent(sql)}`, {
-          method: 'GET'
-        });
+        const userSchemaName = sessionStorage.getItem('userSchemaName');
+        const response = await fetch(
+                `${API_URL}?sql=${encodeURIComponent(sql)}&userSchemaName=${encodeURIComponent(userSchemaName)}`,
+                { method: 'GET'}
+        );
 
         if (!response.ok) {
           const errorText = await response.text();
