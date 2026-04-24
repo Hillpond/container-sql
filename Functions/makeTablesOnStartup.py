@@ -18,13 +18,9 @@ cursor = mydb.cursor()
 tableScript = "DB's/" + asyncio.run(getSelectedFile())
 
 
-#Select database ur working in
-databaseName = "mydb"
-
-cursor.execute("USE " + databaseName + " ;")
-
 #making tables form sql file:
 def makeTablesOnStartup(pathToSchemaScript):
+  #cursor.execute(f"USE {userSchemaName}")  # Select database ur working in (need to get the info from local session)
   with open(pathToSchemaScript, "r", encoding="utf-8") as f:
     sqlScript = f.read()
   for command in sqlScript.split(";"):
