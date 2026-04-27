@@ -15,12 +15,14 @@ mydb = mysql.connector.connect(
 cursor = mydb.cursor()
 
 #Variables
-tableScript = "DB's/" + asyncio.run(getSelectedFile())
+
 
 
 #making tables form sql file:
-def makeTablesOnStartup(pathToSchemaScript):
-  #cursor.execute(f"USE {userSchemaName}")  # Select database ur working in (need to get the info from local session)
+async def makeTablesOnStartup(userSchemaName):
+  selectedFile = await getSelectedFile()
+  pathToSchemaScript = "Functions/Admin/DB's/" + selectedFile
+  cursor.execute(f"USE {userSchemaName}")  # Select database ur working in (need to get the info from local session)
   with open(pathToSchemaScript, "r", encoding="utf-8") as f:
     sqlScript = f.read()
   for command in sqlScript.split(";"):
@@ -31,13 +33,6 @@ def makeTablesOnStartup(pathToSchemaScript):
     cursor.execute(command)
   mydb.commit()
 
-makeTablesOnStartup(tableScript)
-
-
-cursor.execute("SHOW TABLES")
-print("\ntabller opprettet:")
-for table in cursor:
-  print (table)
 
 
 

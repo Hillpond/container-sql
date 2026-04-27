@@ -9,6 +9,8 @@ from Functions.Admin.upload_File import upload_files
 from Functions.User.querySend import querySend
 from fastapi.middleware.cors import CORSMiddleware
 from Functions.createSchemaBasedOnSession  import createSchemaBasedOnSession
+from Functions.makeTablesOnStartup import makeTablesOnStartup
+
 app = FastAPI()
 
 app.add_middleware(
@@ -51,8 +53,11 @@ async def delete_file(filename: str):
 
 #henter localSession for å lage schema
 @app.post("/session/init")
-def init_session(userSchemaName: str):
-    return createSchemaBasedOnSession(userSchemaName)
+async def init_session(userSchemaName: str):
+    # 1) Lag schemaet først (idempotent: gjør ingenting hvis det finnes)
+    createSchemaBasedOnSession(userSchemaName)
+    # 2) Deretter bygg tabellene fra admin-fila inn i schemaet
+    return await makeTablesOnStartup(userSchemaName)
 
 
 #test
