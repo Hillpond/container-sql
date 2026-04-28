@@ -1,24 +1,30 @@
 import mysql.connector
 
 #oppretter kobling til databasen
-mydb = mysql.connector.connect(
-  host="localhost",
-  port="3307",
-  user="root",
-  passwd="pass",
-)
+def connectToMySQL():
+    try:
+        mydb = mysql.connector.connect(
+            host="localhost",
+            port=3307,
+            user="root",
+            passwd="pass"
+        )
+        return mydb
+    except Exception as e:
+        return "Error connecting to MySQL"
+
 
 
 # lager et cursor objekt, funker litt som hvor / hva man gjør i databasen
-cursor = mydb.cursor()
+
 
 #Variables
 pathToSchemaScript = "DB's/"
 
 
-
-
 def querySend(queryString,userSchemaName):
+    mydb = connectToMySQL()
+    cursor = mydb.cursor()
     cursor.execute(f"USE {userSchemaName}")  # Select database ur working in
     for command in queryString.split(";"):
       command = command.strip()
