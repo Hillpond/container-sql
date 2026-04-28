@@ -1,4 +1,5 @@
 import mysql.connector
+import asyncio
 
 from Functions.Admin.getSelectedFile import getSelectedFile
 
@@ -19,14 +20,17 @@ async def recreateTables(userSchemaName):
     cursor = mydb.cursor()
     cursor.execute(f"USE {userSchemaName}")
 
-    # Slett alle tabeller
+    # Hent alle tabeller først
     cursor.execute("SHOW TABLES")
+    tables = [t[0] for t in cursor.fetchall()]  
+
+    # Slett alle tabeller
     cursor.execute("SET FOREIGN_KEY_CHECKS = 0")
-    tables = [name[0] for name in cursor.fetchall()]
     for table in tables:
         cursor.execute(f"DROP TABLE IF EXISTS `{table}`")
     cursor.execute("SET FOREIGN_KEY_CHECKS = 1")
     mydb.commit()
+
     # Bygg tabellene på nytt fra SQL-filen
     selectedFile = await getSelectedFile()
     pathToSchemaScript = "Functions/Admin/DB's/" + selectedFile
