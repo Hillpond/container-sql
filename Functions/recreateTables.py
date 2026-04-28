@@ -1,5 +1,4 @@
 import mysql.connector
-import asyncio
 
 from Functions.Admin.getSelectedFile import getSelectedFile
 
