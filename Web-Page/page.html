@@ -183,6 +183,7 @@
         <div class="controls">
           <button id="sendBtn">Send query</button>
           <button id="clearBtn" class="secondary" type="button">Clear results</button>
+          <button id="recreateBtn" class="secondary" type="button">Recreate tables</button>
         </div>
       </div>
 
@@ -202,6 +203,7 @@
     const clearBtn = document.getElementById('clearBtn');
     const statusBox = document.getElementById('status');
     const tableWrap = document.getElementById('tableWrap');
+    const recreateBtn = document.getElementById('recreateBtn');
 
      // --- creates session code so user gets their own schema --
     // runs at the start when user connects to web page (that is why its a script)
@@ -231,6 +233,30 @@
     //creates tables based on the chosen one from admin
     function runSQLFileSelectedByAdmin(){
     }
+
+    async function recreateTables() {
+    const userSchemaName = sessionStorage.getItem('userSchemaName');
+    recreateBtn.disabled = true;
+    setStatus('Recreating tables...');
+    try {
+        const res = await fetch(
+            `http://localhost:8000/session/recreate?userSchemaName=${encodeURIComponent(userSchemaName)}`,
+            { method: 'POST' }
+        );
+        const data = await res.json();
+        if (data.ok) {
+            setStatus('Tables recreated successfully.', 'success');
+        } else {
+            setStatus('Failed to recreate tables.', 'error');
+        }
+    } catch (err) {
+        setStatus('Error: ' + err.message, 'error');
+    } finally {
+        recreateBtn.disabled = false;
+    }
+}
+
+recreateBtn.addEventListener('click', recreateTables);
 
     function setStatus(message, type = '') {
       statusBox.textContent = message;

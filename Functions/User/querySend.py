@@ -14,16 +14,13 @@ def connectToMySQL():
         return "Error connecting to MySQL"
 
 
-
-# lager et cursor objekt, funker litt som hvor / hva man gjør i databasen
-
-
 #Variables
 pathToSchemaScript = "DB's/"
 
 
 def querySend(queryString,userSchemaName):
     mydb = connectToMySQL()
+    # lager et cursor objekt, funker litt som hvor / hva man gjør i databasen
     cursor = mydb.cursor()
     cursor.execute(f"USE {userSchemaName}")  # Select database ur working in
     for command in queryString.split(";"):

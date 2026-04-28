@@ -10,6 +10,7 @@ from Functions.User.querySend import querySend
 from fastapi.middleware.cors import CORSMiddleware
 from Functions.createSchemaBasedOnSession  import createSchemaBasedOnSession
 from Functions.makeTablesOnStartup import makeTablesOnStartup
+from Functions.recreateTables import recreateTables
 
 app = FastAPI()
 
@@ -19,8 +20,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-
 
 @app.get("/query")
 def run_query(sql: str, userSchemaName: str):
@@ -59,6 +58,11 @@ async def init_session(userSchemaName: str):
     # 2) Deretter bygg tabellene fra admin-fila inn i schemaet
     return await makeTablesOnStartup(userSchemaName)
 
+
+@app.post("/session/recreate")
+async def recreate_tables(userSchemaName: str):
+    await recreateTables(userSchemaName)
+    return {"ok": True, "message": f"Tabeller gjenskapt i {userSchemaName}"}
 
 #test
 @app.get("/admin")
