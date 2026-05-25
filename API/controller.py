@@ -6,11 +6,14 @@ from Functions.Admin.setSelectedFile import setSelectedFile
 from Functions.Admin.getSelectedFile import getSelectedFile
 from Functions.Admin.showAllFiles import showAllFiles
 from Functions.Admin.upload_File import upload_files
+from Functions.activeSchemas import ACTIVE_SCHEMAS
 from Functions.User.querySend import querySend
 from fastapi.middleware.cors import CORSMiddleware
 from Functions.createSchemaBasedOnSession  import createSchemaBasedOnSession
 from Functions.makeTablesOnStartup import makeTablesOnStartup
 from Functions.recreateTables import recreateTables
+import time
+
 
 app = FastAPI()
 
@@ -58,6 +61,13 @@ async def init_session(userSchemaName: str):
     # 2) Deretter bygg tabellene fra admin-fila inn i schemaet
     return await makeTablesOnStartup(userSchemaName)
 
+@app.post("/register-schema")
+async def register_schema(userSchemaName: str):
+
+    ACTIVE_SCHEMAS[userSchemaName] = time.time()
+
+    return {"ok": True}
+
 
 @app.post("/session/recreate")
 async def recreate_tables(userSchemaName: str):
@@ -72,3 +82,4 @@ async def admin_page():
 @app.get("/")
 async def user_page():
     return FileResponse("Web-Page/page.html")
+

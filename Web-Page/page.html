@@ -381,6 +381,20 @@ recreateBtn.addEventListener('click', recreateTables);
         sendQuery();
       }
     });
+
+    function registerSchema() {
+      const schemaName = sessionStorage.getItem("userSchemaName");
+
+      if (!schemaName) return;
+
+      fetch(`/register-schema?userSchemaName=${schemaName}`, {
+        method: "POST"
+      });
+    }
+
+    registerSchema();
+
+    setInterval(registerSchema, 600000);
   </script>
 </body>
 </html>
