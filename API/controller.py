@@ -6,7 +6,7 @@ from Functions.Admin.setSelectedFile import setSelectedFile
 from Functions.Admin.getSelectedFile import getSelectedFile
 from Functions.Admin.showAllFiles import showAllFiles
 from Functions.Admin.upload_File import upload_files
-from Functions.activeSchemas import ACTIVE_SCHEMAS
+from Functions.schemaKiller import ACTIVE_SCHEMAS
 from Functions.User.querySend import querySend
 from fastapi.middleware.cors import CORSMiddleware
 from Functions.createSchemaBasedOnSession  import createSchemaBasedOnSession

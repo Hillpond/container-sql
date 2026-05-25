@@ -1,6 +1,9 @@
-import mysql.connector
-from schemaKiller import ACTIVE_SCHEMAS
 import time
+import threading
+import mysql.connector
+
+# schema_name
+ACTIVE_SCHEMAS = {}
 
 # oppretter kobling til databasen
 def connectToMySQL():
@@ -51,12 +54,24 @@ def killSchemas(activeSchemaList):
         cursor.execute(f"Drop SCHEMA {schema}")
 
 
-while True:
-    activeSchemaList = list(ACTIVE_SCHEMAS.keys()) # list from
-    killSchemas(activeSchemaList)
-    time.sleep(10)
-
-
+def cleanupSchemas():
+    while True:
+        now = time.time()
+        expired = []
+        for schema_name, last_seen in ACTIVE_SCHEMAS.items():
+            # older than 10 minutes
+            if now - last_seen > 6:
+                expired.append(schema_name)
+        for schema_name in expired:
+            del ACTIVE_SCHEMAS[schema_name]
+#        print("ACTIVE_SCHEMAS:", ACTIVE_SCHEMAS)
+        activeSchemaList = list(ACTIVE_SCHEMAS.keys())  # list from
+        killSchemas(activeSchemaList)
+        time.sleep(6)
+threading.Thread(
+    target=cleanupSchemas,
+    daemon=True
+).start()
 
 
 
