@@ -63,7 +63,7 @@ def cleanupSchemas():
         expired = []
         for schema_name, last_seen in ACTIVE_SCHEMAS.items():
             # older than 10 minutes
-            if now - last_seen > 600:
+            if now - last_seen > 6:
                 expired.append(schema_name)
         for schema_name in expired:
             del ACTIVE_SCHEMAS[schema_name]
