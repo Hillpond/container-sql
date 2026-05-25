@@ -30,7 +30,6 @@ async def makeTablesOnStartup(userSchemaName):
     command = command.strip() #fjerner mellomromm og enter(tommre rom)
     if not command:
       continue
-    print (command)
     cursor.execute(command)
   mydb.commit()
 

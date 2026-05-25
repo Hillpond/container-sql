@@ -1,9 +1,6 @@
 import mysql.connector
 
 
-global scemalist
-
-
 # oppretter kobling til databasen
 def connectToMySQL():
     try:
@@ -19,5 +16,43 @@ def connectToMySQL():
 
 
 
+#henter alle schema navn i databasen
+def getAllSchemaNames():
+    scemalist = []
+    mydb = connectToMySQL()
+    cursor = mydb.cursor()
+    cursor.execute("SHOW SCHEMAS")
+    schemas = cursor.fetchall()
 
-def addSchemaNameToList(userSchemaName):
+    # schema som ikke skal med
+    DontWant = ['mysql', 'sys', 'information_schema', 'performance_schema']
+
+    for schema in schemas:
+        schemaNameAsString = schema[0]  # tar bare med string ikke tuppel :clown:
+        if schemaNameAsString not in DontWant:
+            scemalist.append(schemaNameAsString)
+
+    return scemalist
+
+
+
+def killSchemas(activeSchemaList):
+    currentSchemasInDB = getAllSchemaNames()
+    schemasToKill = []
+
+    for schema in currentSchemasInDB:
+        if schema not in activeSchemaList:
+            schemasToKill.append(schema)
+
+    mydb = connectToMySQL()
+    cursor = mydb.cursor()
+    for schema in schemasToKill:
+        cursor.execute(f"Drop SCHEMA {schema}")
+
+
+
+
+
+
+
+
