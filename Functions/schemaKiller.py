@@ -68,8 +68,8 @@ def cleanupSchemas():
         for schema_name in expired:
             del ACTIVE_SCHEMAS[schema_name]
         print("ACTIVE_SCHEMAS:", ACTIVE_SCHEMAS)
+        time.sleep(5)
         deleteSchema()
-        time.sleep(1)
 threading.Thread(
     target=cleanupSchemas,
     daemon=True
