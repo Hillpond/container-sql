@@ -53,6 +53,11 @@ def killSchemas(activeSchemaList):
     for schema in schemasToKill:
         cursor.execute(f"Drop SCHEMA {schema}")
 
+def deleteSchema():
+    while True:
+        time.sleep(10)
+        activeSchemaList = list(ACTIVE_SCHEMAS.keys())  # list from
+        killSchemas(activeSchemaList)
 
 def cleanupSchemas():
     while True:
@@ -65,8 +70,6 @@ def cleanupSchemas():
         for schema_name in expired:
             del ACTIVE_SCHEMAS[schema_name]
 #        print("ACTIVE_SCHEMAS:", ACTIVE_SCHEMAS)
-        activeSchemaList = list(ACTIVE_SCHEMAS.keys())  # list from
-        killSchemas(activeSchemaList)
         time.sleep(6)
 threading.Thread(
     target=cleanupSchemas,
