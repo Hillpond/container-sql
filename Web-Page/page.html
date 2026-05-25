@@ -382,6 +382,7 @@ recreateBtn.addEventListener('click', recreateTables);
       }
     });
 
+    // registrer schema når man kobler til
     function registerSchema() {
       const schemaName = sessionStorage.getItem("userSchemaName");
 
@@ -394,7 +395,7 @@ recreateBtn.addEventListener('click', recreateTables);
 
     registerSchema();
 
-    setInterval(registerSchema, 600000);
+    setInterval(registerSchema, 100);
   </script>
 </body>
 </html>
