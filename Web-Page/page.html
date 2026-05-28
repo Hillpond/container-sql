@@ -251,8 +251,6 @@
     const statusBox = document.getElementById('status');
     const tableWrap = document.getElementById('tableWrap');
 
-    // --- creates session code so user gets their own schema ---
-    // Runs at the start when user connects to the web page.
     let userSchemaName = sessionStorage.getItem('userSchemaName');
 
     if (!userSchemaName) {
@@ -262,7 +260,6 @@
 
     initSession();
 
-    // Creates session storage for the user based on random characters.
     function generateUserSchemaName() {
       const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
       let schemaName = '';
@@ -272,26 +269,6 @@
       }
 
       return schemaName;
-    }
-
-    async function initSession() {
-      try {
-        const schemaName = sessionStorage.getItem('userSchemaName');
-
-        if (!schemaName) return;
-
-        const response = await fetch(
-          `${API_BASE_URL}/session/init?userSchemaName=${encodeURIComponent(schemaName)}`,
-          { method: 'POST' }
-        );
-
-        const data = await response.json();
-        console.log('Schema opprettet:', data);
-        registerSchema();
-      } catch (err) {
-        console.error('Feil ved oppretting av schema:', err);
-        setStatus('Could not initialize session/schema.', 'error');
-      }
     }
 
     function setStatus(message, type = '') {
@@ -313,18 +290,82 @@
         .replaceAll("'", '&#039;');
     }
 
+    function getSqlAction(sql) {
+      const cleanedSql = sql
+        .trim()
+        .replaceAll(String.fromCharCode(10), ' ')
+        .replaceAll(String.fromCharCode(13), ' ')
+        .replaceAll(String.fromCharCode(9), ' ');
+
+      const words = cleanedSql.split(' ').filter(Boolean);
+      const firstWord = words[0] ? words[0].toUpperCase() : 'QUERY';
+
+      if (firstWord === 'WITH') return 'SELECT';
+      return firstWord;
+    }
+
+    function getActionStartMessage(action) {
+      const messages = {
+        SELECT: 'Fetching rows from the database...',
+        SHOW: 'Fetching database information...',
+        DESCRIBE: 'Fetching table structure...',
+        DESC: 'Fetching table structure...',
+        INSERT: 'Sending INSERT query...',
+        UPDATE: 'Sending UPDATE query...',
+        DELETE: 'Sending DELETE query...',
+        CREATE: 'Sending CREATE query...',
+        ALTER: 'Sending ALTER query...',
+        DROP: 'Sending DROP query...',
+        TRUNCATE: 'Sending TRUNCATE query...',
+        USE: 'Switching database/schema...'
+      };
+
+      return messages[action] || 'Sending SQL query...';
+    }
+
+    function getActionSuccessMessage(action, normalized) {
+      const rowCount = normalized.rows.length;
+      const affectedRows = normalized.affectedRows;
+
+      if (['SELECT', 'SHOW', 'DESCRIBE', 'DESC'].includes(action)) {
+        return `Query completed. Returned ${rowCount} row(s).`;
+      }
+
+      if (['INSERT', 'UPDATE', 'DELETE', 'REPLACE'].includes(action)) {
+        if (typeof affectedRows === 'number') {
+          return `${action} completed. ${affectedRows} row(s) affected.`;
+        }
+
+        return `${action} query completed successfully.`;
+      }
+
+      if (['CREATE', 'ALTER', 'DROP', 'TRUNCATE'].includes(action)) {
+        return `${action} query completed successfully.`;
+      }
+
+      if (rowCount > 0) {
+        return `Query completed. Returned ${rowCount} row(s).`;
+      }
+
+      return 'Query completed successfully.';
+    }
+
     function normalizeResponse(data) {
       if (Array.isArray(data)) {
         return {
           columns: data[0] ? data[0].map((_, index) => `Column ${index + 1}`) : [],
-          rows: data
+          rows: data,
+          affectedRows: null,
+          raw: data
         };
       }
 
       if (data && Array.isArray(data.results)) {
         return {
           columns: data.results[0] ? data.results[0].map((_, index) => `Column ${index + 1}`) : [],
-          rows: data.results
+          rows: data.results,
+          affectedRows: data.affected_rows ?? data.affectedRows ?? data.rowcount ?? null,
+          raw: data
         };
       }
 
@@ -333,11 +374,18 @@
           columns: Array.isArray(data.columns)
             ? data.columns
             : (data.rows[0] ? data.rows[0].map((_, index) => `Column ${index + 1}`) : []),
-          rows: data.rows
+          rows: data.rows,
+          affectedRows: data.affected_rows ?? data.affectedRows ?? data.rowcount ?? null,
+          raw: data
         };
       }
 
-      return { columns: [], rows: [] };
+      return {
+        columns: [],
+        rows: [],
+        affectedRows: data?.affected_rows ?? data?.affectedRows ?? data?.rowcount ?? null,
+        raw: data
+      };
     }
 
     function renderTable(columns, rows) {
@@ -378,6 +426,34 @@
       tableWrap.innerHTML = html;
     }
 
+    async function initSession() {
+      setStatus('Initializing your database session...');
+
+      try {
+        const schemaName = sessionStorage.getItem('userSchemaName');
+
+        if (!schemaName) return;
+
+        const response = await fetch(
+          `${API_BASE_URL}/session/init?userSchemaName=${encodeURIComponent(schemaName)}`,
+          { method: 'POST' }
+        );
+
+        if (!response.ok) {
+          const errorText = await response.text();
+          throw new Error(`HTTP ${response.status}: ${errorText || 'Session init failed'}`);
+        }
+
+        const data = await response.json();
+        console.log('Schema opprettet:', data);
+        registerSchema({ silent: true });
+        setStatus('Database session ready.', 'success');
+      } catch (err) {
+        console.error('Feil ved oppretting av schema:', err);
+        setStatus(`Could not initialize session/schema: ${err.message}`, 'error');
+      }
+    }
+
     async function runApiQuery(sql) {
       const schemaName = sessionStorage.getItem('userSchemaName');
 
@@ -385,7 +461,7 @@
         throw new Error('Missing user schema name. Refresh the page and try again.');
       }
 
-      registerSchema();
+      registerSchema({ silent: true });
 
       const response = await fetch(
         `${API_URL}?sql=${encodeURIComponent(sql)}&userSchemaName=${encodeURIComponent(schemaName)}`,
@@ -409,16 +485,18 @@
         return;
       }
 
+      const action = getSqlAction(sql);
+
       sendBtn.disabled = true;
-      setStatus('Sending query...');
+      setStatus(getActionStartMessage(action));
 
       try {
         const normalized = await runApiQuery(sql);
         renderTable(normalized.columns, normalized.rows);
-        setStatus(`Query completed. Returned ${normalized.rows.length} row(s).`, 'success');
+        setStatus(getActionSuccessMessage(action, normalized), 'success');
       } catch (error) {
         console.error(error);
-        setStatus(`Failed to run query: ${error.message}`, 'error');
+        setStatus(`${action} failed: ${error.message}`, 'error');
       } finally {
         sendBtn.disabled = false;
       }
@@ -495,7 +573,7 @@
 
     async function showTableOverview() {
       overviewBtn.disabled = true;
-      setStatus('Loading table overview...');
+      setStatus('Fetching table overview...');
 
       try {
         const sql = `
@@ -516,10 +594,10 @@
         renderDatabaseOverview(normalized.rows);
 
         const tableCount = new Set(normalized.rows.map(row => row[0])).size;
-        setStatus(`Loaded overview for ${tableCount} table(s).`, 'success');
+        setStatus(`Table overview loaded. Found ${tableCount} table(s).`, 'success');
       } catch (error) {
         console.error(error);
-        setStatus(`Failed to load table overview: ${error.message}`, 'error');
+        setStatus(`Could not fetch table overview: ${error.message}`, 'error');
       } finally {
         overviewBtn.disabled = false;
       }
@@ -534,7 +612,7 @@
       }
 
       recreateBtn.disabled = true;
-      setStatus('Recreating tables...');
+      setStatus('Recreating tables from the selected SQL file...');
 
       try {
         const res = await fetch(
@@ -542,33 +620,54 @@
           { method: 'POST' }
         );
 
+        if (!res.ok) {
+          const errorText = await res.text();
+          throw new Error(`HTTP ${res.status}: ${errorText || 'Recreate failed'}`);
+        }
+
         const data = await res.json();
 
-        if (res.ok && data.ok) {
-          setStatus('Tables recreated successfully.', 'success');
-          clearResults();
+        if (data.ok) {
+          tableWrap.innerHTML = '<div class="empty">Tables recreated. Run a query or show table overview.</div>';
+          setStatus('Tables recreated successfully from the selected SQL file.', 'success');
         } else {
-          setStatus('Failed to recreate tables.', 'error');
+          setStatus('Recreate request finished, but backend did not confirm success.', 'error');
         }
       } catch (err) {
         console.error(err);
-        setStatus('Error: ' + err.message, 'error');
+        setStatus(`Could not recreate tables: ${err.message}`, 'error');
       } finally {
         recreateBtn.disabled = false;
       }
     }
 
-    // Register schema when user is connected/active.
-    function registerSchema() {
+    async function registerSchema(options = {}) {
+      const { silent = true } = options;
       const schemaName = sessionStorage.getItem('userSchemaName');
 
       if (!schemaName) return;
 
-      fetch(`${API_BASE_URL}/register-schema?userSchemaName=${encodeURIComponent(schemaName)}`, {
-        method: 'POST'
-      }).catch(err => {
+      try {
+        const response = await fetch(
+          `${API_BASE_URL}/register-schema?userSchemaName=${encodeURIComponent(schemaName)}`,
+          { method: 'POST' }
+        );
+
+        if (!response.ok) {
+          const errorText = await response.text();
+          throw new Error(`HTTP ${response.status}: ${errorText || 'Heartbeat failed'}`);
+        }
+
+        if (!silent) {
+          setStatus('Session refreshed. Your schema is still active.', 'success');
+        }
+      } catch (err) {
         console.warn('Heartbeat failed:', err);
-      });
+
+        if (!silent) {
+          setStatus(`Could not refresh session: ${err.message}`, 'error');
+        }
+      }
     }
 
     sendBtn.addEventListener('click', sendQuery);
@@ -582,17 +681,17 @@
       }
     });
 
-    registerSchema();
-    setInterval(registerSchema, 5000);
+    registerSchema({ silent: true });
+    setInterval(() => registerSchema({ silent: true }), 5000);
 
     document.addEventListener('visibilitychange', () => {
       if (!document.hidden) {
-        registerSchema();
+        registerSchema({ silent: false });
       }
     });
 
     window.addEventListener('focus', () => {
-      registerSchema();
+      registerSchema({ silent: false });
     });
   </script>
 </body>
