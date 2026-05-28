@@ -1,1 +1,1 @@
-LegeTable.sql
+lege, pasient og innleggelse.sql
